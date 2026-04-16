@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "seo-audit-for-claude-code"
+version = "0.2.0"
+description = "Multi-agent technical SEO audit toolkit for Claude Code."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [
+    { name = "Sébastien Grillot", email = "contact@koeki.fr" }
+]
+keywords = ["seo", "audit", "claude-code", "navigation", "technical-seo"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Internet :: WWW/HTTP",
+]
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["shared*"]

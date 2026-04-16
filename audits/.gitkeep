@@ -1,0 +1,27 @@
+# Audits outputs
+
+Ce dossier est gitignored — chaque audit crée son propre sous-dossier :
+
+    audits/
+      2026-04-16-112234-example-com/
+        intake.json
+        pages/
+          homepage-source.html
+          homepage-rendered.html
+        findings/
+          semantic.json
+          link-equity.json
+          crawlability.json
+          accessibility.json
+          performance.json
+          architecture.json
+          comparison.json  (si mode comparaison)
+        consolidation.md
+        errors.log
+        reports/
+          report-draft.md
+          review-notes.md
+          report-final.md
+          report-final.html
+
+Les données clients ne sont jamais committées.
