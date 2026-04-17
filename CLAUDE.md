@@ -62,6 +62,7 @@ seo-audit-for-claude-code/
 ├── README.md                    ← Pitch GitHub
 ├── LICENSE                      ← MIT
 ├── pyproject.toml
+├── package.json                 ← Dépendance Playwright (Node.js)
 ├── .gitignore
 │
 ├── .claude/                     ← Config Claude Code
@@ -78,16 +79,41 @@ seo-audit-for-claude-code/
 │   │   └── seo-audit-menu-reviewer.md
 │   │
 │   ├── skills/                  ← Les expertises (chargées dans les agents)
-│   │   ├── seo-audit-menu-fetcher/        (avec scripts)
+│   │   ├── seo-audit-menu-fetcher/
+│   │   │   └── scripts/
+│   │   │       ├── fetch_public.py          ← URLs publiques (curl)
+│   │   │       ├── fetch_authenticated.js   ← URLs auth (Playwright, viewport, burger)
+│   │   │       ├── import_local.py          ← Fichiers HTML locaux
+│   │   │       └── package.json
 │   │   ├── seo-audit-menu-parser/         (avec scripts)
 │   │   ├── seo-audit-menu-semantic/
+│   │   │   └── scripts/
+│   │   │       ├── breadcrumb_checks.py         ← HTML + JSON-LD breadcrumbs
+│   │   │       └── viewport_content_parity.js   ← Parité desktop/mobile
 │   │   ├── seo-audit-menu-link-equity/    (avec references)
-│   │   ├── seo-audit-menu-crawlability/   (avec scripts)
-│   │   ├── seo-audit-menu-accessibility/  (avec references)
-│   │   ├── seo-audit-menu-performance/    (avec references)
+│   │   ├── seo-audit-menu-crawlability/
+│   │   │   └── scripts/
+│   │   │       ├── diff_source_vs_rendered.py   ← Diff HTML source vs DOM rendu
+│   │   │       ├── url_status_checker.py        ← HEAD requests + cookies auth
+│   │   │       ├── sitemap_alignment.py         ← Menu vs sitemap vs robots.txt
+│   │   │       ├── i18n_checks.py               ← Hreflang + sélecteur langue
+│   │   │       ├── css_analyzer.py              ← Media queries + :hover/:focus
+│   │   │       └── fetch_googlebot.js           ← Diff Chrome UA vs Googlebot
+│   │   ├── seo-audit-menu-accessibility/
+│   │   │   └── scripts/
+│   │   │       ├── accessibility_checks.py      ← 9 tests statiques ARIA/WCAG
+│   │   │       └── accessibility_dynamic.js     ← 8 tests Playwright (Tab, focus, targets)
+│   │   ├── seo-audit-menu-performance/
+│   │   │   └── scripts/
+│   │   │       ├── performance_checks.js        ← CWV réels (LCP, CLS, INP)
+│   │   │       └── interstitial_checker.js      ← Overlays intrusifs mobile
 │   │   ├── seo-audit-menu-architecture/
 │   │   ├── seo-audit-menu-comparator/     (avec scripts)
-│   │   └── seo-audit-menu-reporter/       (avec scripts)
+│   │   └── seo-audit-menu-reporter/
+│   │       └── scripts/
+│   │           ├── assemble_report.py           ← Assemblage findings
+│   │           ├── md_to_html.py                ← Markdown → HTML standalone
+│   │           └── report_html_generator.py     ← Rapport HTML avec jauges SVG
 │   │
 │   └── commands/
 │       └── audit-menu.md        ← Slash command /audit-menu
@@ -101,10 +127,20 @@ seo-audit-for-claude-code/
 │   └── html_utils.py
 │
 ├── knowledge/                   ← Base de connaissances SEO globale
-│   └── README.md
+│   ├── README.md
+│   └── menu-audit-checklist-v0.3.md  ← Référentiel 67 tests
+│
+├── tools/                       ← Outils de pipeline (post-audit)
+│   ├── coverage_report.py       ← Couverture audit vs checklist v0.3
+│   └── audit_completeness_checker.py  ← Contrôleur déterministe PASS/WARN/FAIL
 │
 └── tests/
     ├── fixtures/
+    │   ├── radix_burger_portal.html   ← Fixture Radix portal
+    │   └── mobile_issues.html         ← Fixture violations mobile
+    ├── integration/
+    │   ├── test_burger_radix.js       ← 11 tests diff DOM Radix
+    │   └── test_mobile_checks.js      ← 11 tests détection mobile
     └── test_parser.py
 ```
 
@@ -184,14 +220,21 @@ Avant de merger une branche de feature générée par session agentic coding, v�
 
 ## État actuel du projet
 
-**Fait :**
+**Fait (v0.3) :**
 - [x] Architecture agents + skills + commands
 - [x] Slash command `/audit-menu`
 - [x] Les 10 agents définis
 - [x] Les skills correspondants avec références SEO
+- [x] 13 scripts d'analyse (6 Playwright/Node.js + 7 Python stdlib)
+- [x] Rapport HTML autonome avec jauges SVG, findings enrichis, guides maïeutiques
+- [x] Test sur un vrai cas client (hospitalidee.fr prod + staging auth OAuth)
+- [x] 22 tests d'intégration (Radix burger + violations mobile)
+- [x] Contrôleur de complétude déterministe (PASS/WARN/FAIL)
+- [x] Couverture ~78% de la checklist v0.3 (67 tests)
+- [x] Vérification croisée Google Link Best Practices (18/18 règles conformes)
 
 **À faire :**
-- [ ] Test sur un vrai cas client
-- [ ] Génération rapport HTML (MD seulement pour l'instant)
 - [ ] Support CSV Screaming Frog
 - [ ] Autres types d'audits : `seo-audit-internal-links`, `seo-audit-migration`, `seo-audit-cwv`
+- [ ] Analyse link equity automatisée (brevets Reasonable Surfer)
+- [ ] Diff source vs rendered automatisé dans le pipeline
