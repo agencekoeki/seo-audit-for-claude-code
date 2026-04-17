@@ -129,6 +129,50 @@ Quand l'utilisateur tape `/audit-menu` (ou demande un audit en langage naturel),
 - Ne pas créer de Docker / Dashboard web / UI sans demande explicite
 - Ne pas mettre d'emojis décoratifs dans le code (ok dans les rapports pour les severités)
 
+## Workflow Git
+
+### Conventional Commits obligatoires
+
+Format : `type(scope): description courte en anglais`.
+
+Types autorisés : `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`.
+
+Exemples :
+- `feat(menu): add First Link Priority detection`
+- `fix(parser): handle empty nav elements`
+- `docs(knowledge): add boilerplate patent reference`
+- `refactor(shared): extract html_utils into dedicated module`
+
+Messages de commit en anglais (cohérent avec README.md anglais, convention internationale GitHub).
+
+### Branches
+
+- `main` = toujours déployable, historique propre, jamais de commits WIP.
+- Une branche = une feature : `feat/menu-html-output`, `fix/parser-empty-nav`, `docs/update-readme`.
+- Squash-merge par défaut sur les branches de feature pour garder `main` lisible.
+
+### Pull Requests systématiques
+
+Même en solo, toute modification de `main` passe par une PR. Raisons :
+- Force la relecture avant merge
+- Documente la décision (description + discussion archivées)
+- Permet à CI d'exécuter tests et lint avant intégration
+- Template à remplir : `.github/pull_request_template.md`
+
+### Commits interdits sur `main`
+
+- `wip`, `tmp`, `fix`, `update`, `truc`, `asdf`
+- Commits contenant des secrets ou données client réelles
+- Commits > 500 lignes modifiées sans découpage justifié
+- Commits qui cassent les tests existants
+
+### Hygiène historique
+
+Avant de merger une branche de feature générée par session agentic coding, vérifier :
+1. Squash des micro-commits en commits logiques
+2. Messages reformulés en Conventional Commits propres
+3. Pas de fichiers parasites (`.DS_Store`, logs, caches)
+
 ## Conventions de code
 
 - Python 3.10+, type hints partout
