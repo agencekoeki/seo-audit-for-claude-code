@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<!-- PAS de viewport meta tag — violation C1 -->
+<title>Desktop Title</title>
+<meta name="description" content="Desktop description">
+<style>
+  /* Nav desktop cachée par défaut, visible seulement en min-width:768 — violation 1.5.3 */
+  nav.desktop-nav { display: none; }
+  @media (min-width: 768px) { nav.desktop-nav { display: flex; gap: 1rem; } }
+
+  /* Hover sans focus — violation B4 */
+  nav .has-dropdown:hover .submenu { display: block; }
+
+  /* Tap targets trop petits — violation E1 */
+  nav.mobile-nav a {
+    padding: 2px 4px;
+    font-size: 11px;  /* violation E3 */
+    display: inline-block;
+    margin: 0 1px;  /* espacement 1px — violation E2 */
+  }
+
+  /* Popup intrusif — violation F1 */
+  .intrusive-popup {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .intrusive-popup .content {
+    background: white;
+    padding: 2rem;
+    width: 90%;
+    max-width: 400px;
+  }
+</style>
+<script type="application/ld+json">
+  {"@type": "Organization", "name": "Test Corp", "url": "https://example.com"}
+</script>
+</head>
+<body>
+<header style="position: sticky; top: 0; min-height: 500px; height: 500px; background: #333; color: white;">
+  <!-- Header 350px sticky — violation C3 (>40% du viewport mobile 844px) -->
+  <img src="logo.png" loading="lazy" width="200" height="60" alt="Logo">
+  <!-- loading=lazy sur image above-fold — violation D5 -->
+
+  <nav class="desktop-nav" aria-label="Navigation principale">
+    <a href="/">Accueil</a>
+    <a href="/services">Nos services premium</a>
+    <a href="/about">A propos</a>
+    <a href="/contact">Contact</a>
+    <a href="/hidden-desktop-only">Visible desktop uniquement</a>
+  </nav>
+
+  <nav class="mobile-nav" aria-label="Navigation mobile">
+    <a href="/">Accueil</a>
+    <a href="/services">Services</a>
+    <!-- Ancre tronquée : "Nos services premium" → "Services" — violation A4 -->
+    <a href="/about">Infos</a>
+    <!-- Ancre changée : "A propos" → "Infos" — violation A4 -->
+    <a href="/contact">Contact</a>
+    <!-- /hidden-desktop-only absent en mobile — violation A2 -->
+  </nav>
+
+  <button aria-expanded="false" aria-controls="burger-panel"
+          aria-label="Ouvrir le menu" onclick="toggleBurger()">Menu</button>
+</header>
+
+<div class="intrusive-popup" id="signup-popup">
+  <div class="content">
+    <h2>Inscrivez-vous</h2>
+    <p>Recevez nos offres exclusives</p>
+    <button onclick="this.parentElement.parentElement.style.display='none'">Fermer</button>
+  </div>
+</div>
+
+<main id="main-content">
+  <h1>Page de test — Violations mobile intentionnelles</h1>
+  <!-- Contenu qui déborde horizontalement — violation C2 -->
+  <div style="width: 1200px; min-width: 1200px; background: red; color: white; padding: 1rem;">
+    Ce bloc fait 1200px et déborde de tout viewport mobile.
+  </div>
+</main>
+
+<footer>
+  <a href="/mentions">Mentions legales</a>
+</footer>
+
+<script>
+function toggleBurger() {
+  const btn = document.querySelector('button[aria-controls="burger-panel"]');
+  const existing = document.getElementById('burger-injected');
+  if (existing) { existing.remove(); btn.setAttribute('aria-expanded', 'false'); return; }
+  btn.setAttribute('aria-expanded', 'true');
+  const panel = document.createElement('div');
+  panel.id = 'burger-injected'; // ID différent de aria-controls "burger-panel"
+  panel.setAttribute('role', 'dialog');
+  panel.innerHTML = '<nav><a href="/">Accueil</a><a href="/services">Services</a></nav>';
+  document.body.appendChild(panel);
+}
+</script>
+</body>
+</html>

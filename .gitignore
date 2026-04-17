@@ -27,6 +27,11 @@ htmlcov/
 # Audits outputs (contain client data)
 audits/*
 !audits/.gitkeep
+.playwright-profiles/
+
+# Node.js (Playwright installé à la racine pour tous les scripts JS)
+node_modules/
+package-lock.json
 
 # Claude Code local state
 .claude/.local/

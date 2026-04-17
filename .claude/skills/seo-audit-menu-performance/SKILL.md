@@ -16,12 +16,31 @@ description: Expertise Core Web Vitals appliqués aux menus. INP, CLS, LCP et le
 
 `references/cwv_thresholds.md` — seuils Google officiels et patterns menu qui dégradent chaque métrique
 
+## Script disponible (v0.3)
+
+**Directive d'appel.** L'agent DOIT appeler ce script en desktop ET en mobile sur chaque page auditée et inclure les résultats dans son JSON de findings (`audits/{AUDIT_ID}/findings/performance.json`).
+
+### `scripts/performance_checks.js` — mesures CWV réelles via Playwright
+**DOIT** être appelé en desktop ET en mobile. Instrumente PerformanceObserver pour capturer LCP, CLS, FCP, TTFB. Simule des interactions sans navigation (burger, scroll) pour mesurer INP. Seules les mesures PerformanceObserver comptent pour INP (`inp_p95_ms: null` si aucune mesure PO disponible). Mesure l'occupation du header sticky.
+```bash
+node performance_checks.js --url URL --output results.json [--viewport desktop|mobile] [--profile-dir PATH]
+```
+Items checklist v0.3 : **4.1.1, 4.2.1, 4.2.3, 4.3.1**
+
+### `scripts/interstitial_checker.js` — interstitiels intrusifs mobile
+**DOIT** être appelé sur chaque page auditée en viewport mobile. Détecte les éléments fixed/absolute couvrant >30% du viewport (hors header/nav). Qualifie les cookie banners comme non-intrusifs.
+```bash
+node interstitial_checker.js --url URL --output results.json [--profile-dir PATH]
+```
+
+Seuils appliqués : LCP ≤ 2500ms GOOD, CLS ≤ 0.1 GOOD, INP ≤ 200ms GOOD.
+
 ## Limites
 
-La plupart des findings CWV nécessitent une mesure réelle en conditions utilisateur. En audit statique :
-- On peut détecter les PATTERNS À RISQUE (evidence-based)
-- On ne peut PAS mesurer les métriques réelles
-- Toujours recommander un Lighthouse / PageSpeed Insights en complément
+Avec le script v0.3, les métriques CWV sont maintenant mesurées en synthétique. Restent comme limites :
+- Les mesures sont synthétiques (lab data), pas des données terrain (field data CrUX)
+- L'INP est estimé sur 2-3 interactions simulées, pas sur une session utilisateur complète
+- Pour les données terrain, recommander Chrome UX Report ou PageSpeed Insights
 
 ## Format de sortie JSON
 

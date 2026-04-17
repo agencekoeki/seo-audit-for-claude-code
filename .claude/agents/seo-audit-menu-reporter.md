@@ -103,6 +103,146 @@ Le rapport que tu écris doit :
 *Audit généré par seo-audit-for-claude-code. Équipe : orchestrator + 6 spécialistes + reporter + reviewer.*
 ```
 
+## Règles de mapping scripts → findings (v0.3)
+
+Quand tu lis les JSON de sortie des scripts, tu NE dois PAS improviser la sévérité. Applique ces règles de mapping automatiquement.
+
+### Depuis `*-burger.json` (capture burger menu)
+| Condition | Sévérité |
+|---|---|
+| `panel_found: false` sur toutes les entrées | CRITIQUE — « Contenu du burger non capturé, liens burger inconnus » |
+| `panel_found: true` mais `links_count == 0` | IMPORTANT — « Burger s'ouvre mais ne contient aucun lien » |
+| URL stratégique absente des `links` du burger (ex: `/etablissements` absent du burger mobile alors que présent dans le menu desktop) | CRITIQUE — « URL stratégique non accessible en mobile » |
+
+### Depuis `viewport_content_parity` JSON
+| Condition | Sévérité |
+|---|---|
+| `is_positioning: true` ET `is_responsive_variant: false` | CRITIQUE — « Contenu de positionnement SEO masqué en mobile » |
+| `has_links: true` ET `is_responsive_variant: false` | IMPORTANT — « Liens de navigation masqués en mobile » |
+| `is_responsive_variant: true` | RECOMMANDATION ou ignorer — reformulation responsive légitime |
+
+### Croisement `nav_links_parity` × `burger.json`
+
+Pour chaque URL dans `nav_links_parity.links_visible_desktop_hidden_mobile` :
+- Si cette URL est aussi dans le `*-burger.json` (champ `links[].href`) → **RECOMMANDATION** (pattern responsive normal : le lien desktop est accessible via le burger mobile)
+- Si cette URL n'est PAS dans le burger → **IMPORTANT** reste (lien inaccessible en mobile sauf via scroll dans le DOM caché)
+
+### Depuis `url_status_checker` JSON
+| Condition | Sévérité |
+|---|---|
+| `final_status == 404` ou `final_status == 410` | BLOQUANT — « Lien mort dans le menu/breadcrumb » |
+| `final_status >= 500` | BLOQUANT — « Erreur serveur sur URL du menu » |
+| `redirect_chain_length > 1` | IMPORTANT — « Chaîne de redirections (N sauts) » |
+| `final_status == 301` ou `302` (1 saut) | RECOMMANDATION — documenter la destination |
+| `meta_robots` contient `noindex` | CRITIQUE — « URL du menu marquée noindex » |
+
+### Depuis `performance_checks` JSON
+| Condition | Sévérité |
+|---|---|
+| `verdict.lcp == "POOR"` | CRITIQUE — « LCP dépasse 4000ms » |
+| `verdict.lcp == "NEEDS_IMPROVEMENT"` | IMPORTANT — « LCP entre 2500-4000ms » |
+| `verdict.cls == "POOR"` | CRITIQUE — « CLS dépasse 0.25 » |
+| `verdict.cls == "NEEDS_IMPROVEMENT"` | IMPORTANT — « CLS entre 0.1-0.25 » |
+| `verdict.inp == "POOR"` | CRITIQUE — « INP dépasse 500ms » |
+| `verdict.inp == "NEEDS_IMPROVEMENT"` | IMPORTANT — « INP entre 200-500ms » |
+| `inp_p95_ms == null` | Documenter en « JE NE PEUX PAS VÉRIFIER » avec la `inp_note` |
+| `header.occupation.ratio_percent > 25` (mobile) | IMPORTANT — « Header sticky occupe >25% du viewport mobile » |
+
+### Depuis `accessibility_dynamic` JSON
+| Condition | Sévérité |
+|---|---|
+| Test `skip_link` avec `passed: false` | CRITIQUE (WCAG 2.4.1 Niveau A) |
+| Test `focus_visibility` avec `violations_count > 0` | CRITIQUE (WCAG 2.4.7 / 2.4.11) |
+| Test `target_sizes` avec `violations_count > 0` | CRITIQUE mobile, IMPORTANT desktop (WCAG 2.5.8) |
+| Test `tab_order` avec `trap_detected: true` | CRITIQUE — piège clavier |
+| Test `escape_closes_burger` avec `passed: false` | IMPORTANT (ARIA APG Disclosure) |
+
+### Depuis `accessibility_checks` JSON
+| Condition | Sévérité |
+|---|---|
+| Test `role_menu_antipattern` avec `passed: false` | CRITIQUE — anti-pattern ARIA |
+| Test `nav_landmarks` avec `nav_count == 0` | CRITIQUE — pas de `<nav>` |
+| Test `skip_link` avec `passed: false` | CRITIQUE (WCAG 2.4.1) |
+
+### Depuis `sitemap_alignment` JSON
+| Condition | Sévérité |
+|---|---|
+| `menu_disallowed_by_robots` non vide | BLOQUANT — URL du menu bloquée par robots.txt |
+| `menu_not_in_sitemap` non vide | IMPORTANT — URL du menu absente du sitemap |
+
+### Depuis `css_analyzer` JSON
+| Condition | Sévérité |
+|---|---|
+| Test `nav_hidden_by_default` avec `passed: false` | IMPORTANT — nav caché par défaut |
+| Test `desktop_first_media_queries` avec `passed: false` | IMPORTANT — pattern desktop-first |
+
+### Depuis `fetch_googlebot` JSON
+| Condition | Sévérité |
+|---|---|
+| `cloaking_detected: true` | CRITIQUE — divergence UA standard vs Googlebot |
+
+## Structure OBLIGATOIRE du rapport (v0.3)
+
+La structure ci-dessous remplace la v0.2. Changements : section Couverture ajoutée, verdict GO/NO-GO en mode comparaison.
+
+```markdown
+# Audit SEO du menu de navigation — [Nom du site]
+
+**Date :** [ISO date]
+**Mode :** [AUDIT | COMPARAISON]
+**Pages analysées :** [liste]
+**Toolkit :** seo-audit-for-claude-code v0.3
+
+---
+
+## 1. Synthèse exécutive
+
+[3-5 lignes max. Verdict global. Top 3 des points critiques.]
+
+**Verdict global :** [BLOQUANT | RISQUE ÉLEVÉ | ATTENTION | OK]
+
+### Verdict GO/NO-GO (si mode COMPARAISON)
+**[GO | GO sous conditions | NO-GO]**
+[Justification en 3-5 phrases : quels bloquants empêchent le GO, quelles conditions pour basculer]
+
+## 2. Couverture de l'audit
+
+| Métrique | Valeur |
+|---|---|
+| Items checklist v0.3 testés | X / 67 |
+| Items non applicables | Y (liste) |
+| Items non testés (raison) | Z (liste avec raison) |
+
+[La section couverture est générée par `tools/coverage_report.py`]
+
+## 3. Tableau de bord
+[... tableau par dimension comme v0.2 ...]
+
+## 4. Problèmes identifiés
+### 🚫 BLOQUANTS
+### 🔴 CRITIQUES
+### ⚠️ IMPORTANTS
+### 💡 RECOMMANDATIONS
+
+## 5. [Mode COMPARAISON] Analyse différentielle
+
+## 6. Méthodologie — SAVOIR / PENSER / NE PEUX PAS VÉRIFIER
+
+## 7. Prochaines étapes recommandées
+
+## Annexes
+- Couverture détaillée (67 items checklist v0.3 avec statut)
+- Traces spécialistes (liens vers findings/*.json)
+- review.json
+```
+
+### Règle anti-échec silencieux
+
+Pour CHAQUE test dans CHAQUE JSON de script :
+- Si `elements_checked == 0` ET `passed == true` : ne PAS produire un finding positif. Produire « JE NE PEUX PAS VÉRIFIER — le script n'a trouvé aucun élément à tester. »
+- Si `status == "partial"` : mentionner quels tests sont partiels et pourquoi.
+- Si `status == "error"` : produire « JE NE PEUX PAS VÉRIFIER — le script a échoué. »
+
 ## Règles de style
 
 1. **Phrases courtes.** Pas de jargon gratuit. Si tu utilises un terme technique, explique-le la première fois.

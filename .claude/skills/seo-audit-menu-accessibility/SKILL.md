@@ -27,16 +27,31 @@ description: Expertise mobile-first indexing et WCAG 2.1/2.2 pour les menus. Par
 7. Skip link présent en début de body
 8. CSS `display: none` sous media query sans remplacement
 
+## Scripts disponibles (v0.3)
+
+**Directive d'appel.** L'agent DOIT appeler les DEUX scripts (statique + dynamique) pendant sa phase d'analyse et inclure les résultats dans son JSON de findings (`audits/{AUDIT_ID}/findings/accessibility.json`). Le script statique ne remplace pas le dynamique — ils couvrent des items différents de la checklist.
+
+### `scripts/accessibility_checks.py` — checks statiques ARIA/WCAG
+**DOIT** être appelé sur chaque fichier HTML (source ou rendered). Analyse sans exécution JS : landmarks nav, anti-pattern role="menu", aria-current, outline:none, skip link, triggers button vs a.
+```bash
+python3 accessibility_checks.py --input page.html --url URL --output results.json
+```
+Items checklist v0.3 : **3.1.1, 3.1.2, 3.1.3, 3.1.4, 3.2.4, 3.4.2**
+
+### `scripts/accessibility_dynamic.js` — tests dynamiques Playwright
+**DOIT** être appelé en desktop ET en mobile sur chaque page auditée. Arbre ARIA (`page.accessibility.snapshot()`), Tab order réel, focus visibility via Tab clavier (:focus-visible), target sizes (getBoundingClientRect), Escape ferme le burger, aria-current.
+```bash
+node accessibility_dynamic.js --url URL --output results.json [--viewport desktop|mobile] [--profile-dir PATH]
+```
+Items checklist v0.3 : **3.2.1, 3.2.3, 3.3.1, 3.4.1, 3.4.3**
+
 ## Limites reconnues (JE NE PEUX PAS VÉRIFIER)
 
-Sans accès live, on ne peut pas vérifier :
-- Comportement réel au clavier (Tab, focus visible)
-- Rendu du focus (CSS `:focus-visible`)
-- Taille effective des tap targets (CSS computed values)
-- Comportement des lecteurs d'écran (NVDA, JAWS, VoiceOver)
-- Ordre de lecture réel du DOM
+Avec les scripts v0.3, la plupart des tests sont maintenant couverts. Restent non vérifiables :
+- Comportement des lecteurs d'écran spécifiques (NVDA, JAWS, VoiceOver) — nécessite test manuel
+- Contraste des indicateurs de focus (nécessite analyse visuelle du screenshot)
 
-→ Toujours flagger ces aspects dans `i_cannot_verify` et recommander des outils live (axe, WAVE, Lighthouse A11Y).
+→ Flagger ces aspects dans `i_cannot_verify`.
 
 ## Format de sortie JSON
 

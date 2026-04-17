@@ -56,6 +56,48 @@ Si l'agent n'a que le source (Playwright pas lancé) :
 - Flagger comme "JE NE PEUX PAS VÉRIFIER" au lieu de conclure à l'aveugle
 - Recommander à l'utilisateur de fournir le DOM rendu
 
+## Scripts disponibles (v0.3)
+
+**Directive d'appel.** L'agent DOIT appeler chaque script pertinent pendant sa phase d'analyse et inclure les résultats dans son JSON de findings (`audits/{AUDIT_ID}/findings/crawlability.json`). Un script non appelé = un trou dans la couverture de l'audit.
+
+### `scripts/diff_source_vs_rendered.py` — diff source vs rendu
+Voir ci-dessus. **DOIT** être appelé quand source ET rendered sont disponibles.
+
+### `scripts/url_status_checker.py` — statut HTTP de chaque URL du menu
+**DOIT** être appelé sur toutes les URLs du menu + breadcrumbs. Vérifie les redirections, meta robots, X-Robots-Tag. Parallélisé (8 workers).
+```bash
+python3 url_status_checker.py --input urls.json --output statuses.json [--insecure] [--cookies-from-playwright-profile PATH]
+```
+Items checklist v0.3 : **1.4.3, 9.2.1, 9.2.2**
+
+### `scripts/sitemap_alignment.py` — croisement menu vs sitemap vs robots.txt
+**DOIT** être appelé une fois par version auditée. Parse robots.txt, fetch sitemaps récursifs, détecte URLs du menu absentes ou bloquées.
+```bash
+python3 sitemap_alignment.py --site-url https://example.com --menu-urls menu_urls.json --output results.json [--insecure]
+```
+Items checklist v0.3 : **1.4.1, 1.4.2**
+
+### `scripts/i18n_checks.py` — cohérence hreflang et sélecteur de langue
+**DOIT** être appelé sur chaque page auditée. Détecte sélecteur de langue, parse hreflang, vérifie self-reference et x-default.
+```bash
+python3 i18n_checks.py --input page.html --url URL --output results.json
+```
+Items checklist v0.3 : **7.1.1, 7.1.2, 7.1.3**
+
+### `scripts/css_analyzer.py` — media queries hostiles au mobile-first
+**DOIT** être appelé sur chaque page auditée (avec `--base-url` pour fetcher les CSS externes). Analyse CSS inline + fetch des 5 premières feuilles externes. Détecte nav display:none, desktop-first patterns, :hover sans :focus.
+```bash
+python3 css_analyzer.py --input page.html --output results.json --base-url https://example.com [--insecure]
+```
+Items checklist v0.3 : **1.5.3, 3.2.2**
+
+### `scripts/fetch_googlebot.js` — test cloaking UA Googlebot
+**DOIT** être appelé au moins sur la homepage. Fetch avec UA Chrome standard puis UA Googlebot Smartphone, diff des liens nav.
+```bash
+node fetch_googlebot.js --url URL --output results.json [--profile-dir PATH]
+```
+Items checklist v0.3 : **1.1.3**
+
 ## Format de sortie JSON
 
 Standard. Voir CLAUDE.md projet.
@@ -67,3 +109,8 @@ Champs spécifiques à la dimension :
   - `js_framework_risk`
   - `onclick_without_href`
   - `hydration_pattern`
+  - `url_status`
+  - `sitemap_alignment`
+  - `i18n`
+  - `css_mobile_first`
+  - `cloaking`

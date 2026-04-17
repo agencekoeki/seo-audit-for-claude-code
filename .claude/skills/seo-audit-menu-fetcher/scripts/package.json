@@ -1,0 +1,9 @@
+{
+  "name": "seo-audit-menu-fetcher-scripts",
+  "version": "0.2.0",
+  "description": "Scripts Node.js pour le fetcher (authentification Playwright)",
+  "private": true,
+  "dependencies": {
+    "playwright": "^1.48.0"
+  }
+}
