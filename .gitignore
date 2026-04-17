@@ -35,4 +35,5 @@ package-lock.json
 
 # Claude Code local state
 .claude/.local/
+.claude/settings.local.json
 .claude.json
