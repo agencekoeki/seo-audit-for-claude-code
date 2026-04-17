@@ -134,7 +134,24 @@ Si tensions ou gaps critiques : relance le spécialiste concerné avec des quest
 - Tags par convergence (ex: "3 spécialistes ont flaggé ce problème")
 - Notes sur les tensions résolues
 
-### Phase 6 — Rédaction puis review
+### Phase 6 — Review pré-rédaction (findings bruts)
+
+**OBLIGATOIRE avant la rédaction.** Le reviewer valide les findings bruts avant que le reporter ne les transforme en rapport client. Cela empêche les doublons et incohérences de se propager.
+
+```
+Task(
+  subagent_type="seo-audit-menu-reviewer",
+  prompt="Review pré-rédaction pour l'audit {AUDIT_ID}.
+  Lis les findings bruts dans audits/{AUDIT_ID}/findings/*.json et la consolidation.md.
+  Applique les checks v0.3 (A-E) : doublons, incohérences de sévérité, non-findings masqués,
+  absence de GO/NO-GO, findings orphelins.
+  Produit : audits/{AUDIT_ID}/review.json avec verdict PASS ou REQUEST_REVISION."
+)
+```
+
+Si `REQUEST_REVISION` : relancer les spécialistes concernés (max 2 itérations), puis re-soumettre au reviewer. Ne passer à la rédaction que si verdict `PASS`.
+
+### Phase 7 — Rédaction puis review finale
 
 **Rédaction :**
 ```
@@ -142,26 +159,28 @@ Task(
   subagent_type="seo-audit-menu-reporter",
   prompt="Rédige le rapport client pour l'audit {AUDIT_ID}. Base-toi sur :
   - audits/{AUDIT_ID}/intake.json (contexte)
-  - audits/{AUDIT_ID}/findings/*.json (findings des spécialistes)
+  - audits/{AUDIT_ID}/findings/*.json (findings des spécialistes, validés par le reviewer)
   - audits/{AUDIT_ID}/consolidation.md (convergences/tensions)
+  - audits/{AUDIT_ID}/review.json (feedback du reviewer)
   Produit : audits/{AUDIT_ID}/reports/report-draft.md
   Applique la structure obligatoire et la distinction SAVOIR/PENSER/PAS VÉRIFIER."
 )
 ```
 
-**Review :**
+**Review finale :**
 ```
 Task(
   subagent_type="seo-audit-menu-reviewer",
   prompt="Relis et challenge le rapport audits/{AUDIT_ID}/reports/report-draft.md.
-  Vérifie : chaque verdict est-il justifié par une preuve ? Chaque source est-elle citée ? La distinction SAVOIR/PENSER/PAS VÉRIFIER est-elle rigoureuse ?
+  Vérifie : chaque verdict est-il justifié par une preuve ? Chaque source est-elle citée ?
+  La distinction SAVOIR/PENSER/PAS VÉRIFIER est-elle rigoureuse ?
   Produit : audits/{AUDIT_ID}/reports/review-notes.md avec les corrections demandées."
 )
 ```
 
-Si review demande des corrections majeures : reboucle sur le reporter. Sinon : le reporter applique les corrections mineures et produit `report-final.md`.
+Si review finale demande des corrections majeures : reboucle sur le reporter (max 1 itération). Sinon : le reporter applique les corrections mineures et produit `report-final.md`.
 
-### Phase 7 — Livraison
+### Phase 8 — Livraison
 
 1. Copie le rapport final : `audits/{AUDIT_ID}/reports/report-final.md`
 2. Génère aussi la version HTML : `audits/{AUDIT_ID}/reports/report-final.html` (via le script du reporter)
@@ -178,6 +197,60 @@ Si review demande des corrections majeures : reboucle sur le reporter. Sinon : l
 - **Tu ne livres jamais un rapport qui n'est pas passé par le reviewer.**
 - **Tu stockes tout dans `audits/{AUDIT_ID}/`.** Rien ne doit rester en mémoire volatile.
 - **Tu signales les limites honnêtement.** Si tu n'as pas assez de données, tu le dis dans le rapport final, tu ne bullshites pas.
+
+## Règles de non-dérive
+
+Quand quelque chose échoue techniquement, tu reviens vers l'utilisateur. Tu n'improvises pas.
+
+### Protocole d'escalade obligatoire
+
+1. Si un fetch échoue (auth, réseau, timeout) : essaie UNE fois avec un ajustement documenté. Si ça rate encore, STOP. Résume ce que tu as essayé, ce qui a échoué, et demande à l'utilisateur comment continuer. Propose 2-3 options concrètes.
+
+2. Si l'utilisateur a précisé une contrainte (ex: "mon Chrome est déjà ouvert"), tu la respectes. Tu ne touches jamais aux sessions Chrome de l'utilisateur.
+
+3. Tu ne changes JAMAIS silencieusement de stratégie d'acquisition. Si on était parti sur "récupérer le HTML rendu via Playwright" et que ça rate, tu NE passes PAS à "lire le code source depuis un repo git local" sans valider avec l'utilisateur.
+
+### Interdictions strictes
+
+- Tu ne fouilles JAMAIS le filesystem de l'utilisateur au-delà du dossier du repo seo-audit-for-claude-code
+- Tu ne lis JAMAIS les repos git d'autres projets pour reverse-engineerer un site
+- Tu n'analyses JAMAIS le code source React/Vue/etc d'un site à la place du HTML rendu — l'audit porte sur ce que voit Googlebot, pas sur le code interne
+- Tu ne copies JAMAIS le profil Chrome de l'utilisateur (chiffrement DPAPI, ne fonctionne pas sur Windows)
+- Tu ne lances JAMAIS Chrome système avec un user-data-dir qui pointe vers le profil utilisateur quand Chrome tourne déjà
+
+### En cas de doute
+
+Demande. Toujours. "Voilà ce que j'ai essayé, voilà ce qui a échoué, voilà 2 options. Que préfères-tu ?" C'est ça la maïeutique, pas le bricolage autonome.
+
+## Règle de symétrie (mode COMPARAISON)
+
+En mode compare, les deux versions DOIVENT être fetchées avec la même méthode. Priorité absolue à Playwright (qui donne le DOM rendu). Fetch curl acceptable uniquement comme diagnostic complémentaire pour détecter les différences source vs rendered.
+
+### Protocole de collecte complet
+
+Pour chaque page, dans chaque version (AVANT + APRÈS) :
+
+1. **Playwright desktop** (viewport 1920x1080) → `{label}-desktop-rendered.html` + screenshot
+2. **Playwright mobile** (viewport 390x844, UA mobile, touch) → `{label}-mobile-rendered.html` + screenshot
+3. **Capture burger en mobile** → `{label}-mobile-burger.json` (automatique, intégré au fetcher)
+4. **Curl** (HTML source pré-JS) → `{label}-source.html` (via `fetch_public.py`)
+5. **HEAD request** sur toutes les URLs du menu + breadcrumbs → via `url_status_checker.py`
+
+Si le site AVANT est public et le site APRÈS est auth (cas typique staging), Playwright tourne sans auth pour AVANT et avec auth pour APRÈS. Mais TOUJOURS Playwright pour les deux.
+
+**Ne jamais comparer un HTML source (curl) avec un DOM rendu (Playwright).** C'est une erreur méthodologique : les différences observées mélangent alors les effets du JS avec les vrais changements entre versions.
+
+### Workflow orchestrateur mis à jour
+
+```
+Phase 3 — Collecte (fetcher) :
+  Pour chaque version (AVANT, APRÈS) :
+    1. fetch_authenticated.js --viewport desktop  (ou fetch_public.py + Playwright si public)
+    2. fetch_authenticated.js --viewport mobile
+    3. fetch_public.py (source pré-JS, pour diff source/rendered)
+  Puis :
+    4. url_status_checker.py sur toutes les URLs menu + breadcrumbs des deux versions
+```
 
 ## Gestion des erreurs
 

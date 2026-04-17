@@ -1,0 +1,9 @@
+{
+  "name": "seo-audit-for-claude-code",
+  "version": "0.3.0",
+  "description": "Toolkit d'audits SEO techniques piloté par Claude Code — dépendances Node.js",
+  "private": true,
+  "dependencies": {
+    "playwright": "^1.48.0"
+  }
+}

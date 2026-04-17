@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Fixture Radix — Burger Portal</title>
+<style>
+  /* Simule un site Radix UI où le burger injecte un portail en fin de body */
+  .radix-overlay { display: none; }
+  .radix-overlay.open { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 50; }
+  .radix-sheet { display: none; }
+  .radix-sheet.open { display: flex; flex-direction: column; position: fixed; right: 0; top: 0; bottom: 0; width: 300px; background: #fff; z-index: 51; padding: 1rem; }
+</style>
+</head>
+<body>
+<!-- Header avec nav desktop -->
+<header>
+  <nav aria-label="Navigation principale">
+    <a href="/">Accueil</a>
+    <a href="/avis">Avis</a>
+    <a href="/etablissements">Établissements</a>
+    <a href="/guides">Guides</a>
+  </nav>
+  <!-- Burger button — NE contient PAS de panel dans le DOM initial.
+       Le panel sera injecté comme portail React en fin de body après le clic. -->
+  <button
+    aria-expanded="false"
+    aria-controls="radix-:R1:"
+    aria-label="Ouvrir le menu"
+    onclick="openBurger()"
+  >☰</button>
+</header>
+
+<main>
+  <h1>Page de test — Burger Radix Portal</h1>
+  <p>Cette page simule un site utilisant Radix UI Sheet comme menu mobile.</p>
+  <p>Le panneau burger est injecté en portail React en fin de body, pas dans le header.</p>
+  <footer>
+    <a href="/mentions-legales">Mentions légales</a>
+    <!-- /etablissements est aussi dans le footer = test de la limitation diff DOM -->
+    <a href="/etablissements">Annuaire établissements</a>
+  </footer>
+</main>
+
+<!-- Pas de panel #radix-:R1: dans le DOM initial.
+     Le script ci-dessous simule l'injection React Portal au clic. -->
+<script>
+function openBurger() {
+  const btn = document.querySelector('button[aria-controls="radix-:R1:"]');
+  if (btn.getAttribute('aria-expanded') === 'true') {
+    // Fermer
+    btn.setAttribute('aria-expanded', 'false');
+    const overlay = document.querySelector('.radix-overlay');
+    const sheet = document.querySelector('.radix-sheet');
+    if (overlay) overlay.remove();
+    if (sheet) sheet.remove();
+    return;
+  }
+  btn.setAttribute('aria-expanded', 'true');
+
+  // Injecter le portail Radix en fin de body (comme React le ferait)
+  const overlay = document.createElement('div');
+  overlay.className = 'radix-overlay open';
+  overlay.setAttribute('data-state', 'open');
+  document.body.appendChild(overlay);
+
+  const sheet = document.createElement('div');
+  sheet.className = 'radix-sheet open';
+  sheet.setAttribute('role', 'dialog');
+  sheet.setAttribute('aria-modal', 'true');
+  sheet.setAttribute('data-state', 'open');
+  // NOTE : L'id injecté est dynamique (radix-:Rxxx:), PAS #radix-:R1:
+  sheet.id = 'radix-:R1mcq:';
+  sheet.innerHTML = `
+    <nav aria-label="Menu mobile">
+      <a href="/avis">Avis</a>
+      <a href="/etablissements">Établissements</a>
+      <a href="/medecins">Médecins</a>
+      <a href="/specialites">Spécialités</a>
+      <a href="/guides">Guides</a>
+      <a href="/login">Se connecter</a>
+    </nav>
+  `;
+  document.body.appendChild(sheet);
+}
+
+// Escape pour fermer
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const btn = document.querySelector('button[aria-controls="radix-:R1:"]');
+    if (btn && btn.getAttribute('aria-expanded') === 'true') {
+      openBurger(); // toggle ferme
+      btn.focus();
+    }
+  }
+});
+</script>
+</body>
+</html>

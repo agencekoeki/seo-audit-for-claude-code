@@ -81,12 +81,66 @@ Si "JE NE PEUX PAS VÉRIFIER" est trop court ou vide → suspect
 Si aucune limite n'est admise → 🚨 forcer l'humilité
 Si toutes les dimensions sont validées sans nuances → vérifier qu'on n'a pas sous-estimé
 
+## Checks v0.3 — cross-validation des findings
+
+Ces checks s'appliquent AVANT la grille standard, sur les findings bruts des 7 spécialistes (pas sur le rapport du reporter).
+
+### A. Doublons inter-spécialistes
+
+Deux findings décrivent le même fait avec des codes différents (ex: SEM-007 et A11Y-002 parlent tous les deux de `aria-current` absent). Propose une fusion ou désigne un owner unique. Ne laisse pas de doublons remonter dans le rapport final.
+
+### B. Incohérences de sévérité
+
+Un même fait est classé CRITIQUE par un spécialiste et IMPORTANT par un autre. Arbitrage : **la sévérité la plus haute gagne, si le spécialiste qui l'a posée a raison sur le fait**.
+
+### C. Non-findings masqués
+
+Un spécialiste a écrit "JE NE PEUX PAS VÉRIFIER" alors qu'un script disponible dans le toolkit aurait pu vérifier. Checklist des choses qui NE DOIVENT PLUS être "JE NE PEUX PAS VÉRIFIER" en v0.3 :
+
+- "contenu du burger" → `captureBurgerPanels()` dans `fetch_authenticated.js` le capture
+- "viewport mobile" → `--viewport mobile` existe maintenant
+- "status HTTP d'une URL" → `url_status_checker.py` le teste
+- "INP/CLS/LCP réels" → `performance_checks.js` les mesure
+- "comportement clavier (Tab, Escape)" → `accessibility_dynamic.js` le teste
+- "parité contenu desktop/mobile" → `viewport_content_parity.js` le compare
+
+Si un de ces items apparaît en "JE NE PEUX PAS VÉRIFIER", c'est un bug de process : relancer le spécialiste avec le bon script.
+
+### D. Absence de GO/NO-GO (mode COMPARAISON)
+
+En mode compare, la consolidation DOIT conclure par une recommandation explicite **GO / GO sous conditions / NO-GO**. Si absente ou floue, demander au spécialiste architecture de la produire.
+
+### E. Findings orphelins
+
+Un finding est signalé sans source primaire, sans référence à un item de la checklist v0.3, ou sans evidence extractible des données. Rejeter ou demander justification.
+
+### F. Échecs silencieux
+
+Pour chaque script qui a produit un JSON, vérifier que `elements_checked > 0` pour chaque test. Si 0 et finding positif → REQUEST_REVISION. Vérifier que `status == "complete"`. Si "partial" ou "error", les findings manquants doivent être documentés.
+
+## Format de sortie (review.json)
+
+En plus du `review-notes.md` classique, tu produis un `audits/{AUDIT_ID}/review.json` structuré :
+
+```json
+{
+  "review_verdict": "PASS | REQUEST_REVISION",
+  "issues_detected": [
+    { "type": "duplicate", "items": ["SEM-007", "A11Y-002"], "recommendation": "Fusionner sous A11Y-002" },
+    { "type": "severity_mismatch", "items": ["SEM-008", "PERF-001"], "recommendation": "Aligner sur CRITIQUE" },
+    { "type": "unverified_but_verifiable", "item": "CRAWL-008", "script_available": "url_status_checker.py" }
+  ],
+  "next_action": "reporter peut produire | relancer {specialist} sur {issue}"
+}
+```
+
 ## Ton workflow
 
-1. Lis `audits/{AUDIT_ID}/reports/report-draft.md`
-2. Lis également les findings bruts pour vérifier que le reporter a bien traduit
-3. Applique la grille en 7 points
-4. Produis `audits/{AUDIT_ID}/reports/review-notes.md` avec :
+1. Lis les findings bruts `audits/{AUDIT_ID}/findings/*.json` — applique les checks v0.3 (A-E)
+2. Lis `audits/{AUDIT_ID}/reports/report-draft.md`
+3. Lis également les findings bruts pour vérifier que le reporter a bien traduit
+4. Applique la grille en 7 points
+5. Produis `audits/{AUDIT_ID}/review.json` + `audits/{AUDIT_ID}/reports/review-notes.md` avec :
 
 ```markdown
 # Review — Audit [AUDIT_ID]
